@@ -1,0 +1,8 @@
+Name,Value
+cell diam,10
+actuate scale,2
+actuate period,100
+num active types,2
+max mcs,20100
+work nodes,16
+sim dim,400
