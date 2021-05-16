@@ -1,0 +1,52 @@
+{
+	"initial generation": 0,
+	"num generations": 50,
+	"survival prop": 0.2,
+	"survival_prop": 0.2,
+	"offspring_prop": 0.5,
+    "mutation_rate": 0.01,
+	"population size": 32,
+
+	"cell diameter": 10,
+	"phenotype dimensions": [5, 5],
+	"phenotype scale": [1, 1],
+	"zone phenotype ratio": 1.5,
+	"grid dimensions": [4, 4],
+	"phenotype layout": "car",
+	"scaling mode": "exp",
+	"actuate scale": 2,
+
+	"settle delay": 100,
+	"num cycles": 10,
+	"actuate period": 100,
+	"num active types": 2,
+	"key name signal": {
+		"3": {
+			"name": "ProtocellPassive",
+			"signal": "----"
+		},
+		"4": {
+			"name": "ProtocellActiveA",
+			"signal": "^-v-"
+		},
+		"5": {
+			"name": "ProtocellActiveB",
+			"signal": "-^-v"
+		}
+	},
+
+	"work nodes": 8,
+	"sim output subdir": "Results",
+	"project name": "ProtoCellularSim",
+	"cell field file": "init_cell_field.piff",
+	"generation prefix": {
+		"folder": "Generations",
+		"file": "gen_"
+	},
+	"record file prefix": "",
+
+	"options": {
+		"phenotype layout": ["car", "hexH", "hexV"],
+		"scaling mode": ["exp", "tes"]
+	}
+}

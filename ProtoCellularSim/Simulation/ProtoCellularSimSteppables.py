@@ -256,7 +256,7 @@ class RecordSteppable(SteppableBasePy):
         #                                                                      cell.dict[outputs[d]][1]))
 
 
-class PhotocleaveSteppable(SteppableBasePy):
+class PhotoCleaveSteppable(SteppableBasePy):
     def __init__(self, frequency=10):
         SteppableBasePy.__init__(self, frequency)
         decay_period = 60

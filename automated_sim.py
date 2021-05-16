@@ -1,39 +1,29 @@
-from os.path import dirname, join, expanduser
 from cc3d.CompuCellSetup.CC3DCaller import CC3DCaller
 
+import setup_cells
+
+import os
+import json
 import winsound
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
-
-winsound.Beep(440, 2000)
-# CHECKLIST:
-# mutate suriving genomes                       ###COMPLETED###
-# align genome trajectories                     ###COMPLETED###
-# add option for hexagonal mode
-# implement network genome description
-# investigate smallest mobile unit
-# investigate effects of scaling                ### Fitness
-
-# scaling first
-# using symmetry in patterns to make stuff controable
 
 
 def setup_init_cells(file_path, gen, arrangement, phen_dim, zone, offsets, key_name, name_dims,
                      phenome_scaling, phenome_mode, scaling_mode):
     index = 0
     with open(file_path, 'w') as f_out:
+        index = write_hollow_box_to_piff(f_out, index, 'Wall', [0, 0], [zone, zone])
         for x in range(0, arrangement.shape[0]):
             for y in range(0, arrangement.shape[1]):
-                index = hollow_box_2d(f_out, index, 'Wall', [x * zone, y * zone], [zone, zone])
+                # index = hollow_box_2d(f_out, index, 'Wall', [x * zone, y * zone], [zone, zone])
                 key_matrix = np.reshape(gen[[arrangement[x][y]], :], phen_dim)  # ][
                 start = [x * zone + offsets[0], y * zone + offsets[1]]
                 index = place_cells(f_out, index, key_matrix, key_name, name_dims, start,
                                     phenome_scaling, phenome_mode, scaling_mode)
 
 
-def hollow_box_2d(file, ind, pixel_type, corner, dims):
+def write_hollow_box_to_piff(file, ind, pixel_type, corner, dims):
     new_ind = ind
     shifts = np.array([[0, 0, 0, 0],
                        [0, 0, 1, 1],
@@ -81,7 +71,7 @@ def place_cells(file, ind, key_mat, key_name_dict, name_dims_dict, offset, pheno
             if not key == 0:
                 cell_type = key_name_dict[key]
                 for p1 in range(0, phenome_scaling[0]):
-                    xx = expand[0] * x + p1 * tesselate[0]  # # # # # # # ##  # # # # # # # # # # #  # # #
+                    xx = expand[0] * x + p1 * tesselate[0]  # # # # # # # # # # # # # # # # # # # # # # #
                     for p2 in range(0, phenome_scaling[1]):
                         yy = expand[1] * y + p2 * tesselate[1]
                         x_coords = name_dims_dict[cell_type][0] * (xx * np.ones(2) + np.array([0, 1])) + offset[0]
@@ -98,32 +88,20 @@ def place_cells(file, ind, key_mat, key_name_dict, name_dims_dict, offset, pheno
     return new_ind
 
 
-def calculate_scores(return_object, func, space, grid):
+def calculate_zone_vectors(return_object, zone, grid):
     starts = return_object['result']['initial data']
     diffs = return_object['result']['final data'] - starts
-    # if func == 'total displacement':
-    #     return np.sum(np.sum(diffs ** 2, 1) ** 0.5)
-    # elif func == 'average displacement':
-    #     return np.sum((np.sum(diffs, 0) / diffs.shape[0]) ** 2) ** 0.5
-    # elif func == 'vertical displacement':
-    #     return diffs.sum(0)[1]
-    if func == 'COM':  # == 'COMdist':
-        # Calculate average magnitude of COM displacement vectors.
-        vec_grid = np.zeros((grid, grid, 2))
-        for x in range(0, grid):
-            for y in range(0, grid):
-                mask = [i for i in range(0, diffs.shape[0]) if x * space < starts[i][0] < (x + 1) * space and
-                        y * space < starts[i][1] < (y + 1) * space]
-                if len(mask) == 0:
-                    vec_grid[x][y][:] = 0
-                else:
-                    cell_vecs = diffs[mask][:]
-                    vec_grid[x][y][:] = np.sum(cell_vecs / len(mask), 0)
-                    # Calculate average magnitude of COM displacement vectors.
-                    # vec_grid[x][y] = np.sum(np.sum(cell_vecs ** 2, 1) ** 0.5) / len(mask)
-                    # Calculate magnitude of average COM displacement vector.
-                    # vec_grid[x][y][:] = np.sum(np.sum(cell_vecs / len(mask), 0) ** 2) ** 0.5
-        return vec_grid
+    vec_grid = np.zeros((grid[0], grid[1], 2))
+    for x in range(0, grid[0]):
+        for y in range(0, grid[1]):
+            mask = [i for i in range(0, diffs.shape[0]) if x * zone[0] < starts[i][0] < (x + 1) * zone[0] and
+                    y * zone[1] < starts[i][1] < (y + 1) * zone[1]]
+            if len(mask) == 0:
+                vec_grid[x][y][:] = 0
+            else:
+                cell_vectors = diffs[mask][:]
+                vec_grid[x][y][:] = np.sum(cell_vectors / len(mask), 0)
+    return vec_grid
 
 
 def measure_fitness(scores_dict):
@@ -186,13 +164,12 @@ def apply_mutation(gen, mut_rate, key_dict, skip):
     return mut_gen
 
 
-def evolve_next_gen(order, current_gen, survive, offspring, mutate, key_dict, angles, phen_dims):
-    population_size = current_gen.shape[0]
-    survive_num = int(np.ceil(survive * population_size))
-    offspring_num = int(np.floor(offspring * population_size))
-    # random_num = population_size - survive_num - offspring_num
+def evolve_next_gen(order, current_gen, survive, offspring, mutate, key_dict, angles, phen_dims, config):
+    # population_size = current_gen.shape[0]
+    survive_num = int(np.ceil(survive * config['population size']))
+    offspring_num = int(np.floor(offspring * config['population size']))
     new_gen = np.zeros(current_gen.shape)
-    for i in range(0, population_size):
+    for i in range(0, config['population size']):
         if i < survive_num:
             new_gen[i, :] = current_gen[order[i], :]
         elif i < survive_num + offspring_num:
@@ -236,63 +213,40 @@ def save_trajectories(traj_list, root, traj_lab, file_name):
     pd.DataFrame(y_data).to_csv(root + traj_lab + 'yData_' + file_name, header=False, index=False)
 
 
-def main():
-    # Set up file locations
-    root = r'C:/CompuCell3D-py3-64bit/lib/site-packages/MySimulations/'
-    project_name = 'ProtoCellSim'
-    simulation_file_path = join(root, project_name + '/' + project_name + '.cc3d')
-    init_cells_file_path = join(root, project_name + '/' + 'init_cell_field.piff')
-    variables_file = join(root, project_name + '/' + 'variables.csv')
-    root_output_folder = join(root, project_name + '/' + 'Results')
-    abbrevs = {'ProtoCellSim': 'proto'}
-    gen_file_prefix = 'gen_'
-    # record_file = 'fitness_records.csv'
-    # record_file = 'fit_rec_55_COM.csv'
-    # rec_file_prefix = 'fit_'
+def main(config):
+    dep_config = setup_cells.get_dep_configs(config)
+    root = os.getcwd()
+    simulation_file_path = os.path.join(os.path.join(root, config['project name']), config['project name'] + '.cc3d')
+    sim_output_directory = os.path.join(os.path.join(root, config['project name']), config['sim output subdir'])
+    init_cells_file_path = os.path.join(os.path.join(root, config['project name']), 'init_cell_field.piff')
+    generations_folder = os.path.join(root, config['generation prefix']['folder'])
+
+    root_output_folder = os.path.join(root, 'Results')
 
     # Set up parallel processing / multi-threading parameters
     # cpus = 4
     # threads_per_cpu = cpus
     # work_nodes = cpus * threads_per_cpu
     work_nodes = 1  # ############################################################################ 1 / 16
-    grid_dim = int(work_nodes ** 0.5)
+    # grid_dim = [4, 4]
     phenomes_per_sim = 1  # ###################################################################### 1 / 4
     repeats = int(work_nodes / phenomes_per_sim)
 
     # Set up simulation parameters
-    cell_diam = 10
-    actuate_scale = 2
-    actuate_period = 100
     num_actuation_cycles = 50  # ################################################################### 10 / 100
     key2name = {3: 'ProtocellPassive', 4: 'ProtocellActiveA', 5: 'ProtocellActiveB'}
-    num_active_types = np.array([int('Active' in x) for x in key2name.values()]).sum()
-    max_mcs = ((num_active_types + 2) * num_actuation_cycles + 1) * actuate_period  # num_active_types + 2 ???
-    phenome_scaling = [3, 3]  # ################################################# [1, 1] / [2, 2] / [3, 3]
-    scaling_mode = 'exp'  # ########################################################'tes' / 'exp'
-    phenome_mode = 'car'  # ######################################################## 'car' / 'hexH' 'hexV'
     phenome_dims = [5, 5]
-    phenome_format = ''
-    for d in phenome_dims:
-        phenome_format += str(d)
-    zone_size = int(10 * np.ceil(np.sum([(cell_diam * phenome_scaling[p] * actuate_scale * phenome_dims[p]) ** 2
-                                         for p in range(0, len(phenome_dims))]) ** 0.5 / 10))
-    zone_size = 400  # ################################################# 120 / 200
-    corner_offset = [int((zone_size - 2 - phenome_dims[p] * cell_diam * phenome_scaling[p]) / 2) + 1
-                     for p in range(0, len(phenome_dims))]
-    name2dims = {}
-    for name in key2name.values():
-        name2dims[name] = [cell_diam] * 2
-    sim_dim = int(grid_dim * zone_size)
+
 
     # Write variables to file
-    pd.DataFrame(np.array([['cell diam', cell_diam],
-                           ['actuate scale', actuate_scale],
-                           ['actuate period', actuate_period],
-                           ['num active types', num_active_types],
-                           ['max mcs', max_mcs],
-                           ['work nodes', 16],  # ###################### work_nodes
-                           ['sim dim', sim_dim]]),
-                 None, ['Name', 'Value']).to_csv(variables_file, index=False)
+    # pd.DataFrame(np.array([['cell diam', cell_diam],
+    #                        ['actuate scale', actuate_scale],
+    #                        ['actuate period', actuate_period],
+    #                        ['num active types', num_active_types],
+    #                        ['max mcs', max_mcs],
+    #                        ['work nodes', 16],  # ###################### work_nodes
+    #                        ['sim dim', sim_dim]]),
+    #              None, ['Name', 'Value']).to_csv(variables_file, index=False)
 
     # Set up evolution parameters
     track_flag = True
@@ -327,80 +281,81 @@ def main():
 
     # rep_seed = ['0350500554303403334050044']  # <<< combination
     # rep_seed = '0404035350430040340534003'  # <<<< random
-    init_gen = 0
-    number_of_generations = 10  # ########################################################### 10 / 50
-    fitness_function = 'COM'
     survival_prop = 0.2  # 0.2
     offspring_prop = 0.5  # 0.4
     mutation_rate = 0.01
     align_genomes = False
-    pop_size = 32
 
-    # Begin simulations
-    record_file = phenome_mode + phenome_format + '_'
-    if phenome_scaling[0] == 1 and phenome_scaling[1] == 1:
+    phenotype_dimension_string = (str(config['phenotype dimensions'][0]).zfill(2) +
+                                  str(config['phenotype dimensions'][1]).zfill(2) + '_')
+    record_file = config['phenotype layout'] + phenotype_dimension_string
+    if config['phenotype scale'][0] == 1 and config['phenotype scale'][1] == 1:
         record_file += 'sca'
     else:
-        record_file += scaling_mode
-    record_file += str(phenome_scaling[0]) + str(phenome_scaling[1]) + '_act' + str(num_actuation_cycles)
+        record_file += config['scaling mode']
+    record_file += (str(config['phenotype scale'][0]).zfill(2) + str(config['phenotype scale'][1]).zfill(2) +
+                    '_cyc' + str(config['num cycles']))
     if evolve_flag:
         record_file = 'ev_fit_' + record_file + ('_rep' + str(repeats) +
                                                  '_sur' + str(int(100 * survival_prop)) +
                                                  '_cro' + str(int(100 * offspring_prop)) +
                                                  '_mut' + str(int(100 * mutation_rate)) +
                                                  '_rot' + str(int(align_genomes)))
-    if init_gen == 0:
-        with open(join(root, record_file + '.csv'), 'w') as f_out:
+    if config['initial generation'] == 0:
+        with open(os.path.join(root, record_file + '.csv'), 'w') as f_out:
             f_out.write('code,gen,fit\n')  # _MA,fit_AM
     trajectories = []
-    for gen_num, sim in enumerate([simulation_file_path] * number_of_generations):
+    # Begin simulations
+    winsound.Beep(440, 2000)
+    for gen_num, sim in enumerate([simulation_file_path] * config['num generations']):
         if evolve_flag:
-            gen_fname = gen_file_prefix + str(phenome_format) + '_' + str(gen_num + init_gen) + '.csv'
-            generation = pd.read_csv(join(root_output_folder, gen_fname), header=None).to_numpy()
+            gen_filename = (config['generation prefix']['file'] + phenotype_dimension_string +
+                            str(gen_num + config['initial generation']) + '.csv')
+            generation = pd.read_csv(os.path.join(generations_folder, gen_filename), header=None).to_numpy()
             if gen_num == 0 and randomise_flag:
-                generation = np.zeros((pop_size, int(np.prod(phenome_dims))))
+                generation = np.zeros((config['population size'], int(np.prod(config['phenotype dimensions']))))
                 generation = evolve_next_gen(np.arange(0, generation.shape[0], 1), generation, 0, 0,
-                                             mutation_rate, key2name, np.zeros(generation.shape[0]), phenome_dims)
+                                             mutation_rate, key2name, np.zeros(generation.shape[0]), phenome_dims, config)
         else:
             generation = get_genome(rep_seed)
         # fitnesses = [0 for _ in range(0, generation.shape[0])]
-        fit_vecs = {}
+        end_vectors = {}
         for g in range(0, generation.shape[0]):
-            fit_vecs[g] = []
+            end_vectors[g] = []
         for i in range(0, int(generation.shape[0] / phenomes_per_sim)):
-            grid_arrangement = np.array([int(i * phenomes_per_sim + np.floor(j / repeats))
-                                         for j in range(0, work_nodes)]).reshape((grid_dim, grid_dim))
-            setup_init_cells(init_cells_file_path, generation, grid_arrangement, tuple(phenome_dims), zone_size,
-                             corner_offset, key2name, name2dims, phenome_scaling, phenome_mode, scaling_mode)
-            # key_matrix = np.reshape(generation[[i]][:], tuple(phenome_dims))  # [0], dims[1]))
-            # if not key_matrix.sum() == 0:
-            # place_cells(init_cells_file_path, key_matrix, key2name, name2dims)
+            zone_genome_index = np.array([int(i * phenomes_per_sim + np.floor(j / repeats))
+                                         for j in range(0, dep_config['num zones'])]).reshape(config['grid dimensions'])
+            # setup_init_cells(init_cells_file_path, generation, zone_genome_index, tuple(phenome_dims),
+            #                  dep_config['zone size'], dep_config['corner offset'], key2name, name2dims,
+            #                  phenome_scaling, phenome_mode, scaling_mode)
+            setup_cells.initialise_piff(init_cells_file_path, generation, zone_genome_index, config)
             cc3d_caller = CC3DCaller(cc3d_sim_fname=sim,
                                      screenshot_output_frequency=0,
-                                     output_dir=join(root_output_folder, abbrevs[project_name]),
+                                     output_dir=sim_output_directory,
                                      result_identifier_tag=i)
             ret_value = cc3d_caller.run()
             if track_flag:
                 trajectories.append([ret_value['result']['trackX'], ret_value['result']['trackY']])
-            fit_vec_grid = calculate_scores(ret_value, fitness_function, zone_size, grid_dim)
-            # for index in set([a for a in grid_arrangement.reshape(-1)]):
-            for x in range(0, fit_vec_grid.shape[0]):
-                for y in range(0, fit_vec_grid.shape[1]):
-                    fit_vecs[grid_arrangement[x][y]].append(fit_vec_grid[x][y])
+            zone_end_vectors = calculate_zone_vectors(ret_value, dep_config['zone size'], config['grid dimensions'])
+            # for index in set([a for a in zone_genome_index.reshape(-1)]):
+            for x in range(0, zone_end_vectors.shape[0]):
+                for y in range(0, zone_end_vectors.shape[1]):
+                    end_vectors[zone_genome_index[x][y]].append(zone_end_vectors[x][y])
             # fitnesses[i] = calculate_scores(ret_value, fitness_function, zone_size, grid_dim)
-        fit_measures, fit_angles = measure_fitness(fit_vecs)
+        fit_measures, fit_angles = measure_fitness(end_vectors)
         # fitnesses = fit_measures.sum(1)
-        fitnesses = fit_measures[:, 0] / num_actuation_cycles
+        fitnesses = fit_measures[:, 0] / config['num cycles']
         if evolve_flag:
             if not align_genomes:
                 fit_angles = np.zeros(generation.shape[0])
             ordered_genomes = np.argsort(-1 * fitnesses)
             next_gen = evolve_next_gen(ordered_genomes, generation, survival_prop, offspring_prop,
-                                       mutation_rate, key2name, fit_angles, phenome_dims)
-            new_gen_fname = gen_file_prefix + str(phenome_format) + '_' + str(gen_num + init_gen + 1) + '.csv'
-            pd.DataFrame(next_gen).to_csv(join(root_output_folder, new_gen_fname),
+                                       mutation_rate, key2name, fit_angles, phenome_dims, config)
+            new_gen_filename = (config['generation file prefix'] + phenotype_dimension_string +
+                                str(gen_num + config['initial generation'] + 1) + '.csv')
+            pd.DataFrame(next_gen).to_csv(os.path.join(root_output_folder, new_gen_filename),
                                           header=False, index=False)
-        with open(join(root, record_file + '.csv'), 'a') as f_out:
+        with open(os.path.join(root, record_file + '.csv'), 'a') as f_out:
             for i in range(0, generation.shape[0]):
                 gene_code = ''
                 for j in range(0, generation.shape[1]):
@@ -414,4 +369,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    with open('config.json') as config_file:
+        raw_config = json.load(config_file)
+    main(raw_config)
