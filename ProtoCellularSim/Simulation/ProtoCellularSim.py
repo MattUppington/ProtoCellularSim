@@ -13,7 +13,8 @@ def configure_simulation():
     cell_diameter = config['cell diameter']
     sim_dim = dep_config['sim dimensions']
     max_mcs = dep_config['max mcs']
-    work_nodes = config['work nodes']
+    work_nodes = dep_config['work nodes']
+    piff_file = config['cell field file']
 
     from cc3d.core.XMLUtils import ElementCC3D
     compucell3d_element = ElementCC3D("CompuCell3D", {"Revision": "20210123", "Version": "4.2.4"})
@@ -77,7 +78,7 @@ def configure_simulation():
     compucell3d_element.ElementCC3D("Plugin", {"Name": "Secretion"})
 
     steppable_element = compucell3d_element.ElementCC3D("Steppable", {"Type": "PIFInitializer"})
-    steppable_element.ElementCC3D("PIFName", {}, "init_cell_field.piff")
+    steppable_element.ElementCC3D("PIFName", {}, piff_file)
 
     CompuCellSetup.setSimulationXMLDescription(compucell3d_element)
 

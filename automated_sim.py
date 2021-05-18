@@ -26,14 +26,14 @@ def get_genome(seed):
 
 
 def evolve_next_gen(order, current_gen, survive, offspring, mutate, angles, config):
-    # population_size = current_gen.shape[0]
-    survive_num = int(np.ceil(survive * config['population size']))
-    offspring_num = int(np.floor(offspring * config['population size']))
+    population_size = current_gen.shape[0]
+    survive_num = int(np.ceil(survive * population_size))
+    offspring_num = int(np.floor(offspring * population_size))
     new_gen = np.zeros(current_gen.shape)
-    for i in range(0, config['population size']):
+    for i in range(0, population_size):
         if i < survive_num:
             new_gen[i, :] = current_gen[order[i], :]
-        elif i < survive_num + offspring_num:
+        elif i < survive_num + offspring_num and survive_num > 1:
             parent_indices = np.random.choice(survive_num, 2, replace=False)
             new_gen[i, :] = apply_crossover(current_gen[order[parent_indices], :],
                                             angles[order[parent_indices]], config)
@@ -139,25 +139,13 @@ def main(config):
     dep_config = setup_cells.get_dep_configs(config)
     root = os.getcwd()
     simulation_file_path = os.path.join(os.path.join(root, config['project name']), config['project name'] + '.cc3d')
-    sim_output_directory = os.path.join(os.path.join(root, config['project name']), config['sim output subdir'])
+    sim_dump_directory = os.path.join(os.path.join(root, config['project name']), config['sim dump subdir'])
     init_cells_file_path = os.path.join(os.path.join(root, config['project name']), 'init_cell_field.piff')
     generations_folder = os.path.join(root, config['generation prefix']['folder'])
 
-    root_output_folder = os.path.join(root, 'Results')
-
-    # Set up parallel processing / multi-threading parameters
-    # cpus = 4
-    # threads_per_cpu = cpus
-    # work_nodes = cpus * threads_per_cpu
-    work_nodes = 1  # ############################################################################ 1 / 16
-    # grid_dim = [4, 4]
-    phenomes_per_sim = 1  # ###################################################################### 1 / 4
-
-
-
     # Set up evolution parameters
-    track_flag = True
-    evolve_flag = False
+    track_flag = False
+    evolve_flag = True
     randomise_flag = True
 
     # rep_seed = ['5555433540354445544405540']
@@ -208,7 +196,8 @@ def main(config):
                                                  '_mut' + str(int(100 * config['mutation rate'])) +
                                                  '_rot' + str(int(align_genomes)))
     if config['initial generation'] == 0:
-        with open(os.path.join(root, record_file + '.csv'), 'w') as f_out:
+        with open(os.path.join(os.path.join(root, config['generation prefix']['folder']),
+                               record_file + '.csv'), 'w') as f_out:
             f_out.write('code,gen,fit\n')  # _MA,fit_AM
     trajectories = []
     # Begin simulations
@@ -217,39 +206,34 @@ def main(config):
         if evolve_flag:
             gen_filename = (config['generation prefix']['file'] + phenotype_dimension_string +
                             str(gen_num + config['initial generation']) + '.csv')
-            generation = pd.read_csv(os.path.join(generations_folder, gen_filename), header=None).to_numpy()
             if gen_num == 0 and randomise_flag:
-                generation = np.zeros((config['population size'], int(np.prod(config['phenotype dimensions']))))
+                generation = np.zeros((dep_config['population size'], int(np.prod(config['phenotype dimensions']))))
                 generation = evolve_next_gen(np.arange(0, generation.shape[0], 1), generation, 0, 0,
                                              config['mutation rate'], np.zeros(generation.shape[0]), config)
+            else:
+                generation = pd.read_csv(os.path.join(generations_folder, gen_filename), header=None).to_numpy()
         else:
             generation = get_genome(rep_seed)
-        # fitness_per_cycle = [0 for _ in range(0, generation.shape[0])]
         end_vectors = {}
         for g in range(0, generation.shape[0]):
             end_vectors[g] = []
-        for i in range(0, int(generation.shape[0] / phenomes_per_sim)):
-            zone_genome_index = np.array([int(i * phenomes_per_sim + np.floor(j / config['repeats']))
-                                         for j in range(0, dep_config['num zones'])]).reshape(config['grid dimensions'])
-            # setup_init_cells(init_cells_file_path, generation, zone_genome_index, tuple(phenome_dims),
-            #                  dep_config['zone size'], dep_config['corner offset'], key2name, name2dims,
-            #                  phenome_scaling, phenome_mode, scaling_mode)
+        for i in range(0, int(generation.shape[0] / config['phenotypes per simulation'])):
+            zone_genome_index = np.array([int(i * config['phenotypes per simulation'] +
+                                              np.floor(j / config['repeats'])) for j in
+                                          range(0, dep_config['num zones'])]).reshape(dep_config['grid dimensions'])
             setup_cells.initialise_piff(init_cells_file_path, generation, zone_genome_index, config)
             cc3d_caller = CC3DCaller(cc3d_sim_fname=sim,
                                      screenshot_output_frequency=0,
-                                     output_dir=sim_output_directory,
+                                     output_dir=sim_dump_directory,
                                      result_identifier_tag=i)
             ret_value = cc3d_caller.run()
             if track_flag:
                 trajectories.append([ret_value['result']['trackX'], ret_value['result']['trackY']])
-            zone_end_vectors = calculate_zone_vectors(ret_value, dep_config['zone size'], config['grid dimensions'])
-            # for index in set([a for a in zone_genome_index.reshape(-1)]):
+            zone_end_vectors = calculate_zone_vectors(ret_value, dep_config['zone size'], dep_config['grid dimensions'])
             for x in range(0, zone_end_vectors.shape[0]):
                 for y in range(0, zone_end_vectors.shape[1]):
                     end_vectors[zone_genome_index[x][y]].append(zone_end_vectors[x][y])
-            # fitness_per_cycle[i] = calculate_scores(ret_value, fitness_function, zone_size, grid_dim)
         fitness, predicted_directions = measure_fitness(end_vectors)
-        # fitness_per_cycle = fitness.sum(1)
         fitness_per_cycle = fitness[:, 0] / config['num cycles']
         if evolve_flag:
             if not align_genomes:
@@ -257,11 +241,12 @@ def main(config):
             ordered_genomes = np.argsort(-1 * fitness_per_cycle)
             next_gen = evolve_next_gen(ordered_genomes, generation, survival_prop, offspring_prop,
                                        config['mutation rate'], predicted_directions, config)
-            new_gen_filename = (config['generation file prefix'] + phenotype_dimension_string +
+            new_gen_filename = (config['generation prefix']['file'] + phenotype_dimension_string +
                                 str(gen_num + config['initial generation'] + 1) + '.csv')
-            pd.DataFrame(next_gen).to_csv(os.path.join(root_output_folder, new_gen_filename),
+            pd.DataFrame(next_gen).to_csv(os.path.join(generations_folder, new_gen_filename),
                                           header=False, index=False)
-        with open(os.path.join(root, record_file + '.csv'), 'a') as f_out:
+        with open(os.path.join(os.path.join(root, config['generation prefix']['folder']),
+                               record_file + '.csv'), 'a') as f_out:
             for i in range(0, generation.shape[0]):
                 gene_code = ''
                 for j in range(0, generation.shape[1]):
@@ -270,7 +255,6 @@ def main(config):
                             str(fitness_per_cycle[i]) + '\n')  # + ',' + str(fitness[i, 1])
     if track_flag:
         save_trajectories(trajectories, root, traj_label, record_file + '.csv')
-        # plot_trajectories(trajectories, zone_size)
     winsound.Beep(440, 2000)
 
 

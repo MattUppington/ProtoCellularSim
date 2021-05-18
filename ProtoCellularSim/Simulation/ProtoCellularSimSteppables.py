@@ -52,7 +52,7 @@ class ConstraintInitializerSteppable(SteppableBasePy):
         cell.lambdaSurface = 2.0
 
     def start(self):
-        self.my_cell_radius = self.shared_steppable_vars['cell diam'] / 2
+        self.my_cell_radius = self.shared_steppable_vars['config']['cell diameter'] / 2
         self.shared_steppable_vars['neutral volume'] = int(np.floor(np.pi * self.my_cell_radius ** 2))
         self.shared_steppable_vars['neutral surface'] = 8 * self.my_cell_radius
         for cell in self.cell_list_by_type(self.PROTOCELLPASSIVE):  # , self.PROTOCELLACTIVE1, self.PROTOCELLACTIVE2):

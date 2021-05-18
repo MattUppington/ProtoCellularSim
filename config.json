@@ -1,23 +1,25 @@
 {
+	"task": "evolve1",
+
 	"initial generation": 0,
-	"num generations": 50,
+	"num generations": 3,
 	"survive proportion": 0.2,
 	"offspring proportion": 0.5,
     "mutation rate": 0.01,
-	"population size": 32,
-	"repeats": 1,
+	"repeats": 4,
+	"phenotypes per simulation": 4,
+	"simulations per generation": 5,
 
 	"cell diameter": 10,
 	"phenotype dimensions": [5, 5],
-	"phenotype scale": [1, 1],
-	"zone phenotype ratio": 1.5,
-	"grid dimensions": [4, 4],
 	"phenotype layout": "car",
+	"phenotype scale": [1, 1],
 	"scaling mode": "exp",
+	"zone phenotype ratio": 1.5,
 	"actuate scale": 2,
 
 	"settle delay": 100,
-	"num cycles": 10,
+	"num cycles": 1,
 	"actuate period": 100,
 	"num active types": 2,
 	"key name signal": {
@@ -27,16 +29,16 @@
 		},
 		"4": {
 			"name": "ProtocellActiveA",
-			"signal": "^-v-"
+			"signal": "|-|-"
 		},
 		"5": {
 			"name": "ProtocellActiveB",
-			"signal": "-^-v"
+			"signal": "-|-|"
 		}
 	},
 
-	"work nodes": 8,
-	"sim output subdir": "Results",
+	"max work nodes": 4,
+	"sim dump subdir": "outputs",
 	"project name": "ProtoCellularSim",
 	"cell field file": "init_cell_field.piff",
 	"generation prefix": {
@@ -46,7 +48,18 @@
 	"record file prefix": "",
 
 	"options": {
-		"phenotype layout": ["car", "hexH", "hexV"],
-		"scaling mode": ["exp", "tes"]
+		"task": {
+			"evolve1": "evolve cell placement and discrete actuation signal",
+			"trace": "record trajectories for a single morphology"
+		},
+		"phenotype layout": {
+			"car": "cartesian formation",
+			"hexH": "hexagonal formation from horizontal shifts in cartesian grid",
+			"hexV": "hexagonal formation from vertical shifts in cartesian grid"
+		},
+		"scaling mode": {
+			"exp": "expand morphology by creating clusters of defined size from individual cells",
+			"tes": "tessellate morphology by duplicating across larger grid of defined size"
+		}
 	}
 }
