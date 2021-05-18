@@ -1,11 +1,11 @@
 {
 	"initial generation": 0,
 	"num generations": 50,
-	"survival prop": 0.2,
-	"survival_prop": 0.2,
-	"offspring_prop": 0.5,
-    "mutation_rate": 0.01,
+	"survive proportion": 0.2,
+	"offspring proportion": 0.5,
+    "mutation rate": 0.01,
 	"population size": 32,
+	"repeats": 1,
 
 	"cell diameter": 10,
 	"phenotype dimensions": [5, 5],

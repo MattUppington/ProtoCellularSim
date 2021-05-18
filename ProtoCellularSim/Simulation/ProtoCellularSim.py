@@ -1,14 +1,12 @@
 # from cc3d import CompuCellSetup
 from ProtoCellularSimSteppables import *
 
-from MySimulations.setup_cells import get_dep_configs
-
-import os
-import json
-
 
 def configure_simulation():
-    config_filename = os.path.join(os.getcwd(), 'config.json')
+    import os
+    import json
+    from MySimulations.setup_cells import get_dep_configs
+    config_filename = os.path.join('C:\\CompuCell3D-py3-64bit\\lib\\site-packages\\MySimulations', 'config.json')
     with open(config_filename) as config_file:
         config = json.load(config_file)
     dep_config = get_dep_configs(config)

@@ -1,7 +1,9 @@
 from cc3d.core.PySteppables import *
 from cc3d import CompuCellSetup
-from pathlib import Path
 
+
+import os
+import json
 import numpy as np
 import pandas as pd
 import random
@@ -15,13 +17,24 @@ class FileReaderSteppable(SteppableBasePy):
         SteppableBasePy.__init__(self, frequency)
 
     def start(self):
-        global_data_file = r'C:/CompuCell3D-py3-64bit/lib/site-packages/MySimulations/ProtoCellSim/variables.csv'
-        df = pd.read_csv(global_data_file)
+        config_filename = os.path.join('C:\\CompuCell3D-py3-64bit\\lib\\site-packages\\MySimulations', 'config.json')
+        with open(config_filename) as config_file:
+            config = json.load(config_file)
+        # global_data_file = r'C:/CompuCell3D-py3-64bit/lib/site-packages/MySimulations/ProtoCellSim/variables.csv'
+        # df = pd.read_csv(global_data_file)
         # self.set_max_mcs(int(df['Value'][df['Name'] == 'max mcs']))
-        self.shared_steppable_vars['cell diam'] = float(df['Value'][df['Name'] == 'cell diam'])
-        self.shared_steppable_vars['actuate period'] = float(df['Value'][df['Name'] == 'actuate period'])
-        self.shared_steppable_vars['actuate scale'] = float(df['Value'][df['Name'] == 'actuate scale'])
-        self.shared_steppable_vars['num active types'] = float(df['Value'][df['Name'] == 'num active types'])
+        self.shared_steppable_vars['config'] = config
+
+        ############################# TEMP
+        self.shared_steppable_vars['cell diam'] = config['cell diameter']
+        self.shared_steppable_vars['actuate period'] = config['actuate period']
+        self.shared_steppable_vars['actuate scale'] = config['actuate scale']
+        self.shared_steppable_vars['num active types'] = config['num active types']
+        ############################# TEMP
+        # self.shared_steppable_vars['cell diam'] = float(df['Value'][df['Name'] == 'cell diam'])
+        # self.shared_steppable_vars['actuate period'] = float(df['Value'][df['Name'] == 'actuate period'])
+        # self.shared_steppable_vars['actuate scale'] = float(df['Value'][df['Name'] == 'actuate scale'])
+        # self.shared_steppable_vars['num active types'] = float(df['Value'][df['Name'] == 'num active types'])
         # self.shared_steppable_vars['light frequency'] = float(df['Value'][df['Name'] == 'light frequency'])
 
 
