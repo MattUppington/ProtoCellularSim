@@ -1,0 +1,17 @@
+{
+  "0": {
+    "description": "north moving block",
+    "dimensions": [5, 5],
+    "genome": "4455544455444554445544555"
+  },
+  "1": {
+    "description": "east moving block",
+    "dimensions": [5, 5],
+    "genome": "4444444444544455555555555"
+  },
+  "2": {
+    "description": "south moving block",
+    "dimensions": [5, 5],
+    "genome": "5554455444554445544455544"
+  }
+}

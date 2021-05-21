@@ -5,7 +5,7 @@ from cc3d import CompuCellSetup
 import os
 import json
 import numpy as np
-import pandas as pd
+# import pandas as pd
 import random
 
 

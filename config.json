@@ -2,13 +2,13 @@
 	"task": "evolve1",
 
 	"initial generation": 0,
-	"num generations": 3,
+	"num generations": 2,
 	"survive proportion": 0.2,
 	"offspring proportion": 0.5,
     "mutation rate": 0.01,
 	"repeats": 4,
 	"phenotypes per simulation": 4,
-	"simulations per generation": 5,
+	"simulations per generation": 3,
 
 	"cell diameter": 10,
 	"phenotype dimensions": [5, 5],
@@ -37,7 +37,7 @@
 		}
 	},
 
-	"max work nodes": 4,
+	"max work nodes": 1,
 	"sim dump subdir": "outputs",
 	"project name": "ProtoCellularSim",
 	"cell field file": "init_cell_field.piff",
