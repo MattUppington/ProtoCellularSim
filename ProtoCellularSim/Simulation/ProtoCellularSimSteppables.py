@@ -17,7 +17,8 @@ class FileReaderSteppable(SteppableBasePy):
         SteppableBasePy.__init__(self, frequency)
 
     def start(self):
-        config_filename = os.path.join('C:\\CompuCell3D-py3-64bit\\lib\\site-packages\\MySimulations', 'config.json')
+        config_filename = os.path.join('C:\\CompuCell3D-py3-64bit\\lib\\site-packages\\ProtocellSimulator',
+                                       'config.json')
         with open(config_filename) as config_file:
             config = json.load(config_file)
         # global_data_file = r'C:/CompuCell3D-py3-64bit/lib/site-packages/MySimulations/ProtoCellSim/variables.csv'
