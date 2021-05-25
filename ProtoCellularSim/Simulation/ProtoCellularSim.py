@@ -4,7 +4,7 @@ from ProtoCellularSimSteppables import *
 
 def configure_simulation():
     import pandas as pd
-    variables_file_path = r'C:/CompuCell3D-py3-64bit/lib/site-packages/MySimulations/ProtoCellSim/variables.csv'
+    variables_file_path = r'C:/CompuCell3D-py3-64bit/lib/site-packages/ProtocellSimulator/ProtoCellularSim/variables.csv'
     variables = pd.read_csv(variables_file_path)
     cell_diam = variables['Value'][variables['Name'] == 'cell diam'].values[0]
     # actuate_scale = variables['Value'][variables['Name'] == 'actuate scale']

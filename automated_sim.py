@@ -4,7 +4,7 @@ from cc3d.CompuCellSetup.CC3DCaller import CC3DCaller
 import winsound
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 winsound.Beep(440, 2000)
@@ -186,7 +186,7 @@ def apply_mutation(gen, mut_rate, key_dict, skip):
     return mut_gen
 
 
-def evolve_next_gen(order, current_gen, survive, offspring, mutate, key_dict, angles, phen_dims):
+def evolve_next_gen(order, current_gen, survive, offspring, mutate, key_dict, angles, phen_dims, phen_mode):
     population_size = current_gen.shape[0]
     survive_num = int(np.ceil(survive * population_size))
     offspring_num = int(np.floor(offspring * population_size))
@@ -198,7 +198,7 @@ def evolve_next_gen(order, current_gen, survive, offspring, mutate, key_dict, an
         elif i < survive_num + offspring_num:
             parent_inds = np.random.choice(survive_num, 2, replace=False)
             new_gen[i, :] = apply_crossover(current_gen[order[parent_inds], :],
-                                            angles[order[parent_inds]], phen_dims)
+                                            angles[order[parent_inds]], phen_dims, phen_mode)
             # for j in range(0, current_gen.shape[1]):
             #     ind = np.random.choice([0, 1], 1)
             #     new_gen[i, j] = current_gen[order[parent_inds[ind[0]]]][j]
@@ -238,13 +238,13 @@ def save_trajectories(traj_list, root, traj_lab, file_name):
 
 def main():
     # Set up file locations
-    root = r'C:/CompuCell3D-py3-64bit/lib/site-packages/MySimulations/'
-    project_name = 'ProtoCellSim'
+    root = r'C:/CompuCell3D-py3-64bit/lib/site-packages/ProtocellSimulator/'
+    project_name = 'ProtoCellularSim'
     simulation_file_path = join(root, project_name + '/' + project_name + '.cc3d')
     init_cells_file_path = join(root, project_name + '/' + 'init_cell_field.piff')
     variables_file = join(root, project_name + '/' + 'variables.csv')
     root_output_folder = join(root, project_name + '/' + 'Results')
-    abbrevs = {'ProtoCellSim': 'proto'}
+    abbrevs = {'ProtoCellularSim': 'proto'}
     gen_file_prefix = 'gen_'
     # record_file = 'fitness_records.csv'
     # record_file = 'fit_rec_55_COM.csv'
@@ -254,20 +254,20 @@ def main():
     # cpus = 4
     # threads_per_cpu = cpus
     # work_nodes = cpus * threads_per_cpu
-    work_nodes = 1  # ############################################################################ 1 / 16
+    work_nodes = 16  # ############################################################################ 1 / 16
     grid_dim = int(work_nodes ** 0.5)
-    phenomes_per_sim = 1  # ###################################################################### 1 / 4
+    phenomes_per_sim = 4  # ###################################################################### 1 / 4
     repeats = int(work_nodes / phenomes_per_sim)
 
     # Set up simulation parameters
     cell_diam = 10
     actuate_scale = 2
     actuate_period = 100
-    num_actuation_cycles = 50  # ################################################################### 10 / 100
+    num_actuation_cycles = 3  # ################################################################### 10 / 100
     key2name = {3: 'ProtocellPassive', 4: 'ProtocellActiveA', 5: 'ProtocellActiveB'}
     num_active_types = np.array([int('Active' in x) for x in key2name.values()]).sum()
     max_mcs = ((num_active_types + 2) * num_actuation_cycles + 1) * actuate_period  # num_active_types + 2 ???
-    phenome_scaling = [3, 3]  # ################################################# [1, 1] / [2, 2] / [3, 3]
+    phenome_scaling = [1, 1]  # ################################################# [1, 1] / [2, 2] / [3, 3]
     scaling_mode = 'exp'  # ########################################################'tes' / 'exp'
     phenome_mode = 'car'  # ######################################################## 'car' / 'hexH' 'hexV'
     phenome_dims = [5, 5]
@@ -290,13 +290,13 @@ def main():
                            ['actuate period', actuate_period],
                            ['num active types', num_active_types],
                            ['max mcs', max_mcs],
-                           ['work nodes', 16],  # ###################### work_nodes
+                           ['work nodes', 4],  # ###################### work_nodes
                            ['sim dim', sim_dim]]),
                  None, ['Name', 'Value']).to_csv(variables_file, index=False)
 
     # Set up evolution parameters
-    track_flag = True
-    evolve_flag = False
+    track_flag = False
+    evolve_flag = True
     randomise_flag = True
 
     # rep_seed = ['5555433540354445544405540']
@@ -328,13 +328,13 @@ def main():
     # rep_seed = ['0350500554303403334050044']  # <<< combination
     # rep_seed = '0404035350430040340534003'  # <<<< random
     init_gen = 0
-    number_of_generations = 10  # ########################################################### 10 / 50
+    number_of_generations = 2  # ########################################################### 10 / 50
     fitness_function = 'COM'
     survival_prop = 0.2  # 0.2
     offspring_prop = 0.5  # 0.4
     mutation_rate = 0.01
     align_genomes = False
-    pop_size = 32
+    pop_size = 8  # ############################################## 32
 
     # Begin simulations
     record_file = phenome_mode + phenome_format + '_'
@@ -360,7 +360,7 @@ def main():
             if gen_num == 0 and randomise_flag:
                 generation = np.zeros((pop_size, int(np.prod(phenome_dims))))
                 generation = evolve_next_gen(np.arange(0, generation.shape[0], 1), generation, 0, 0,
-                                             mutation_rate, key2name, np.zeros(generation.shape[0]), phenome_dims)
+                                             mutation_rate, key2name, np.zeros(generation.shape[0]), phenome_dims, phenome_mode)
         else:
             generation = get_genome(rep_seed)
         # fitnesses = [0 for _ in range(0, generation.shape[0])]
@@ -396,7 +396,7 @@ def main():
                 fit_angles = np.zeros(generation.shape[0])
             ordered_genomes = np.argsort(-1 * fitnesses)
             next_gen = evolve_next_gen(ordered_genomes, generation, survival_prop, offspring_prop,
-                                       mutation_rate, key2name, fit_angles, phenome_dims)
+                                       mutation_rate, key2name, fit_angles, phenome_dims, phenome_mode)
             new_gen_fname = gen_file_prefix + str(phenome_format) + '_' + str(gen_num + init_gen + 1) + '.csv'
             pd.DataFrame(next_gen).to_csv(join(root_output_folder, new_gen_fname),
                                           header=False, index=False)

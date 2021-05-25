@@ -15,7 +15,7 @@ class FileReaderSteppable(SteppableBasePy):
         SteppableBasePy.__init__(self, frequency)
 
     def start(self):
-        global_data_file = r'C:/CompuCell3D-py3-64bit/lib/site-packages/MySimulations/ProtoCellSim/variables.csv'
+        global_data_file = r'C:/CompuCell3D-py3-64bit/lib/site-packages/ProtocellSimulator/ProtoCellularSim/variables.csv'
         df = pd.read_csv(global_data_file)
         # self.set_max_mcs(int(df['Value'][df['Name'] == 'max mcs']))
         self.shared_steppable_vars['cell diam'] = float(df['Value'][df['Name'] == 'cell diam'])
