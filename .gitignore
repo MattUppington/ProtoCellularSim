@@ -1,0 +1,6 @@
+**.csv
+**.sqlite
+**__pycache__/
+**.piff
+ProtoCellularSim/Outputs/*
+!ProtoCellularSim/Outputs/.gitkeep
