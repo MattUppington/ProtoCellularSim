@@ -25,8 +25,8 @@ def configure_simulation():
     PottsElmnt.ElementCC3D("Steps", {}, str(max_mcs))
     PottsElmnt.ElementCC3D("Temperature", {}, "3.0")
     PottsElmnt.ElementCC3D("NeighborOrder", {}, "1")
-    PottsElmnt.ElementCC3D("Boundary_x", {}, "Periodic")
-    PottsElmnt.ElementCC3D("Boundary_y", {}, "Periodic")
+    PottsElmnt.ElementCC3D("Boundary_x", {}, "NoFlux")  # Periodic
+    PottsElmnt.ElementCC3D("Boundary_y", {}, "NoFlux")  # Periodic
 
     PluginElmnt = CompuCell3DElmnt.ElementCC3D("Plugin", {"Name": "CellType"})
     PluginElmnt.ElementCC3D("CellType", {"TypeId": "0", "TypeName": "Medium"})

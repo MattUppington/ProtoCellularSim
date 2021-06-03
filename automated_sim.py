@@ -1,6 +1,8 @@
 from os.path import dirname, join, expanduser
 from cc3d.CompuCellSetup.CC3DCaller import CC3DCaller
 
+import setup_cells
+
 import winsound
 import numpy as np
 import pandas as pd
@@ -18,84 +20,6 @@ winsound.Beep(440, 2000)
 
 # scaling first
 # using symmetry in patterns to make stuff controable
-
-
-def setup_init_cells(file_path, gen, arrangement, phen_dim, zone, offsets, key_name, name_dims,
-                     phenome_scaling, phenome_mode, scaling_mode):
-    index = 0
-    with open(file_path, 'w') as f_out:
-        for x in range(0, arrangement.shape[0]):
-            for y in range(0, arrangement.shape[1]):
-                index = hollow_box_2d(f_out, index, 'Wall', [x * zone, y * zone], [zone, zone])
-                key_matrix = np.reshape(gen[[arrangement[x][y]], :], phen_dim)  # ][
-                start = [x * zone + offsets[0], y * zone + offsets[1]]
-                index = place_cells(f_out, index, key_matrix, key_name, name_dims, start,
-                                    phenome_scaling, phenome_mode, scaling_mode)
-
-
-def hollow_box_2d(file, ind, pixel_type, corner, dims):
-    new_ind = ind
-    shifts = np.array([[0, 0, 0, 0],
-                       [0, 0, 1, 1],
-                       [1, 1, 0, 0],
-                       [1, 1, 1, 1]])
-    edges = np.array([[0, 1, 0, 0],
-                      [0, 0, 0, 1],
-                      [1, 1, 0, 1],
-                      [0, 1, 1, 1]])
-    edges[:, [0, 1]] *= dims[0] - 2
-    edges[:, [2, 3]] *= dims[1] - 2
-    for side in range(0, 4):
-        line = str(new_ind) + ' ' + pixel_type
-        for elem in range(0, 4):
-            axis = int(np.floor(elem / 2))
-            line += ' ' + str(corner[axis] + shifts[side, elem] + edges[side, elem])
-        line += ' 0 0\n'
-        file.write(line)
-        new_ind += 1
-    return new_ind
-
-
-def place_cells(file, ind, key_mat, key_name_dict, name_dims_dict, offset, phenome_scaling,
-                phenome_mode, scaling_mode):
-    # with open(fname, 'w') as f_out
-    #     index = 0
-    #     offset = 2
-    shunt = None
-    if phenome_mode == 'car':
-        shunt = [0, 0]
-    elif phenome_mode == 'hexH':
-        shunt = [1, 0]
-    elif phenome_mode == 'hexV':
-        shunt = [0, 1]
-    expand = [1, 1]
-    tesselate = [1, 1]
-    if scaling_mode == 'exp':
-        expand = phenome_scaling
-    elif scaling_mode == 'tes':
-        tesselate = [key_mat.shape[0], key_mat.shape[1]]
-    new_ind = ind
-    for x in np.arange(0, key_mat.shape[0]):
-        for y in np.arange(0, key_mat.shape[1]):
-            key = key_mat[x][y]
-            if not key == 0:
-                cell_type = key_name_dict[key]
-                for p1 in range(0, phenome_scaling[0]):
-                    xx = expand[0] * x + p1 * tesselate[0]  # # # # # # # ##  # # # # # # # # # # #  # # #
-                    for p2 in range(0, phenome_scaling[1]):
-                        yy = expand[1] * y + p2 * tesselate[1]
-                        x_coords = name_dims_dict[cell_type][0] * (xx * np.ones(2) + np.array([0, 1])) + offset[0]
-                        y_coords = name_dims_dict[cell_type][1] * (yy * np.ones(2) + np.array([0, 1])) + offset[1]
-                        x_coords += shunt[0] * np.mod(y, 2) * int(phenome_scaling[0] *
-                                                               name_dims_dict[cell_type][0] / 2)
-                        y_coords += shunt[1] * np.mod(x, 2) * int(phenome_scaling[1] *
-                                                               name_dims_dict[cell_type][1] / 2)
-                        line = (str(new_ind) + ' ' + cell_type +
-                                ' ' + str(int(x_coords[0])) + ' ' + str(int(x_coords[1])) +
-                                ' ' + str(int(y_coords[0])) + ' ' + str(int(y_coords[1])) + ' 0 0\n')
-                        file.write(line)
-                        new_ind += 1
-    return new_ind
 
 
 def calculate_scores(return_object, func, space, grid):
@@ -254,16 +178,16 @@ def main():
     # cpus = 4
     # threads_per_cpu = cpus
     # work_nodes = cpus * threads_per_cpu
-    work_nodes = 16  # ############################################################################ 1 / 16
+    work_nodes = 4  # ############################################################################ 1 / 16
     grid_dim = int(work_nodes ** 0.5)
-    phenomes_per_sim = 4  # ###################################################################### 1 / 4
+    phenomes_per_sim = 1  # ###################################################################### 1 / 4
     repeats = int(work_nodes / phenomes_per_sim)
 
     # Set up simulation parameters
     cell_diam = 10
     actuate_scale = 2
     actuate_period = 100
-    num_actuation_cycles = 3  # ################################################################### 10 / 100
+    num_actuation_cycles = 10  # ################################################################### 10 / 100
     key2name = {3: 'ProtocellPassive', 4: 'ProtocellActiveA', 5: 'ProtocellActiveB'}
     num_active_types = np.array([int('Active' in x) for x in key2name.values()]).sum()
     max_mcs = ((num_active_types + 2) * num_actuation_cycles + 1) * actuate_period  # num_active_types + 2 ???
@@ -290,7 +214,7 @@ def main():
                            ['actuate period', actuate_period],
                            ['num active types', num_active_types],
                            ['max mcs', max_mcs],
-                           ['work nodes', 4],  # ###################### work_nodes
+                           ['work nodes', 1],  # ###################### work_nodes
                            ['sim dim', sim_dim]]),
                  None, ['Name', 'Value']).to_csv(variables_file, index=False)
 
@@ -328,7 +252,7 @@ def main():
     # rep_seed = ['0350500554303403334050044']  # <<< combination
     # rep_seed = '0404035350430040340534003'  # <<<< random
     init_gen = 0
-    number_of_generations = 2  # ########################################################### 10 / 50
+    number_of_generations = 20  # ########################################################### 10 / 50
     fitness_function = 'COM'
     survival_prop = 0.2  # 0.2
     offspring_prop = 0.5  # 0.4
@@ -370,7 +294,7 @@ def main():
         for i in range(0, int(generation.shape[0] / phenomes_per_sim)):
             grid_arrangement = np.array([int(i * phenomes_per_sim + np.floor(j / repeats))
                                          for j in range(0, work_nodes)]).reshape((grid_dim, grid_dim))
-            setup_init_cells(init_cells_file_path, generation, grid_arrangement, tuple(phenome_dims), zone_size,
+            setup_cells.setup_init_cells(init_cells_file_path, generation, grid_arrangement, tuple(phenome_dims), zone_size,
                              corner_offset, key2name, name2dims, phenome_scaling, phenome_mode, scaling_mode)
             # key_matrix = np.reshape(generation[[i]][:], tuple(phenome_dims))  # [0], dims[1]))
             # if not key_matrix.sum() == 0:
